@@ -30,3 +30,16 @@ aidlc/.aidlc-readonly-latch
 # Hai kho git con, mỗi kho có lịch sử và CI riêng
 tpp-simulator-app/
 tpp-simulator-portal/
+
+# Thư mục kho docs cũ (kho gốc nay dùng remote tpp-simulator-docs), không đưa vào kho gốc
+tpp-simulator-docs/
+
+# Cấu hình MCP chứa khóa API: tạo thủ công trên từng máy, không commit
+.mcp.json
+.kiro/settings/mcp.json
+
+# Tệp tạm của công cụ và log chạy lệnh
+.agents/tasks/*
+!.agents/tasks/chain.ps1
+!.agents/tasks/portal-scan-report.md
+tools/aidlc-dashboard/_verify*
