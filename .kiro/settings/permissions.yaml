@@ -1,0 +1,17 @@
+rules:
+  - capability: fs_read
+    effect: allow
+  - capability: fs_write
+    effect: allow
+  - capability: shell
+    effect: allow
+  - capability: web_fetch
+    effect: allow
+  - capability: web_search
+    effect: allow
+  - capability: mcp
+    effect: allow
+  - capability: subagent
+    effect: allow
+  - capability: power
+    effect: allow

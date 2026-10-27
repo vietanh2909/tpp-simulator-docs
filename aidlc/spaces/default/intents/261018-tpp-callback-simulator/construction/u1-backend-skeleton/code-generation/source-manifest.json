@@ -1,0 +1,17 @@
+{
+  "stage": "code-generation",
+  "unit": "u1-backend-skeleton",
+  "version": 1,
+  "writes": [
+    {"path": "pom.xml"},
+    {"path": "README.md"},
+    {"path": "compose.yaml"},
+    {"path": "src/main/resources/application.yml"},
+    {"path": "src/main/resources/db/migration/"},
+    {"path": "src/main/java/com/tpp/simulator/"},
+    {"path": "src/test/java/com/tpp/simulator/"},
+    {"path": "docs/api/openapi.yaml"},
+    {"path": "docs/samples/thu-ho-service.json"},
+    {"path": "docs/samples/thu-ho-callback.json"}
+  ]
+}

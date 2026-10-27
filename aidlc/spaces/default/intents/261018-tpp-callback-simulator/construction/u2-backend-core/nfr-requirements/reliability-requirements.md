@@ -1,0 +1,62 @@
+# Yêu cầu độ tin cậy — U2 `u2-backend-core`
+
+> Nguồn: NFR2 và NFR5 trong `requirements.md`, ADR-002, ADR-008, `rules.md` của U2 (BR12.1, BR12.7, BR14.8, BR14.10, BR15.5, BR15.6, BR22.2, BR22.5), `functional-spec.md` (W12, W16, W18, W25), yêu cầu độ tin cậy đã duyệt của U1 và `nfr-requirements-questions.md` của U2 (giả định 12, 13, 15). Mã `NFRx.y` kế thừa mã NFR gốc; **mã của U2 nằm ở dải `y` từ 21 trở lên**, mã U1 (`NFR2.1` đến `NFR2.6`, `NFR5.2`) giữ nguyên.
+
+## Mục tiêu khả dụng
+
+Giữ nguyên U1: công cụ phát triển chạy local, **không đặt SLA/SLO**. Tiêu chí là tính đúng đắn và tự phục hồi:
+
+- Không bao giờ trả "thành công" cho một callback chưa được ghi (BR14.8).
+- Không bao giờ có dữ liệu ghi một nửa, kể cả khi sửa dịch vụ (`NFR2.30`).
+- Lần nhận bị từ chối mà không ghi được thì phải **lộ ra** cho người gọi bằng header, không im lặng (`NFR2.26`).
+- Tự phục hồi khi cơ sở dữ liệu trở lại, không cần khởi động lại backend (NFR2.4 của U1, `NFR2.26`).
+
+## Quan hệ với yêu cầu của U1
+
+| Mã U1 | Tình trạng ở U2 |
+|---|---|
+| NFR2.1 (ghi nguyên tử Callback và Transaction; Service và phiên bản số 1) | **Giữ**; mở rộng cho sửa dịch vụ (`NFR2.30`) |
+| NFR2.4 (cơ sở dữ liệu tạm mất, tự phục hồi trong 30 giây) | **Giữ chỉ tiêu** (chờ kết nối tối đa 5 giây, phục vụ lại trong vòng 30 giây). **Chỉ đổi cách kiểm thử thủ công:** U1 viết "dừng rồi bật lại container PostgreSQL"; Docker không dùng được trên máy này nên U2 dừng và bật lại **PostgreSQL cài sẵn** (dịch vụ PostgreSQL hoặc cụm tạm bằng `pg_ctl`) |
+| NFR2.5 (Flyway tự chạy lúc khởi động, không sửa bản đã áp dụng) | **Giữ**; mở rộng cho công cụ nạp (`NFR2.29`) |
+| NFR2.6 (Callback bất biến, giữ vô thời hạn, không xóa vật lý Service) | **Giữ**; mở rộng cho mã mới (`NFR2.28`) |
+| NFR5.2 (chạy được từ bản checkout sạch theo README) | **Giữ**; phần README bổ sung của U2: `NFR5.25`, `NFR5.26` |
+
+## Yêu cầu
+
+| ID | Yêu cầu | Chỉ tiêu kiểm chứng | Cách kiểm chứng | Nguồn |
+|---|---|---|---|---|
+| NFR2.26 | **Không ghi được lần nhận bị từ chối** (BR15.6). Ghi lần nhận bị từ chối chỉ **thử một lần**: không thử lại, không hàng đợi, không ghi bù về sau. **Phạm vi tình huống (theo BR14.1, BR14.9, BR15.6):** backend đọc ảnh dịch vụ **trước**, rồi mới ghi. (i) Nếu **đọc được** ảnh dịch vụ nhưng **ghi lần nhận bị từ chối lỗi** thì trả **mã từ chối gốc** (theo BR14.6) kèm `X-Simulator-Record-Failed: true` và `X-Simulator-Error`; đúng một dòng nhật ký mức ERROR thay cho dòng INFO (BR14.10). (ii) Nếu **ngay việc đọc ảnh dịch vụ lỗi** (kho dữ liệu không dùng được hoàn toàn) thì đó là BR14.9: `500 INTERNAL_ERROR`, **không** có header `X-Simulator-Record-Failed`, không ghi gì, đúng một dòng ERROR; không bao giờ trả `401` ở tình huống này. Trong mọi trường hợp một request chờ lấy kết nối **tối đa 5 giây**. Khi cơ sở dữ liệu trở lại, việc ghi lần từ chối phục hồi **trong vòng 30 giây**, không cần khởi động lại | **Hai kiểm thử tích hợp tách biệt.** (A) *Đọc được, ghi lỗi* (tình huống (i)): kiểm thử tạo trên database kiểm thử một **trigger chỉ dùng cho kiểm thử** `BEFORE INSERT` trên bảng `callbacks` có hàm PL/pgSQL gọi `RAISE EXCEPTION` (tên có tiền tố `test_`, ví dụ `test_fail_callback_insert`), rồi **xóa trigger và hàm** trong khối dọn dẹp (`finally`/`@AfterEach`) kể cả khi kiểm thử lỗi. Cách này chạy được với role chủ bảng, không cần thu hồi quyền hay quyền `CREATEDB`, và không ảnh hưởng dữ liệu khác. Khi trigger đang có: callback **sai khóa** tới dịch vụ `API_KEY` phải cho `401` kèm **cả hai** header `X-Simulator-Record-Failed: true` và `X-Simulator-Error` và **đúng một** dòng ERROR; callback **được chấp nhận** phải cho `500 INTERNAL_ERROR` kèm `X-Simulator-Error`, **không** có header `X-Simulator-Record-Failed`, không bảng nào có dữ liệu mới (cả `transactions`, BR14.8) và đúng một dòng ERROR. Thời gian trả lời không quá 5 giây cộng dư địa 2 giây của kiểm thử. Sau khi xóa trigger: callback sai khóa kế tiếp được ghi (không có header) và chờ thêm 5 giây **không có** Callback nào xuất hiện thêm cho các lần đã lỗi (không ghi bù). Rà soát mã: không có vòng thử lại hay hàng đợi. (B) *Pool hỏng toàn bộ* (tình huống (ii), như kiểm thử NFR2.4 của U1: pool trỏ vào địa chỉ hỏng): gửi callback sai khóa, khẳng định `500 INTERNAL_ERROR`, **không** có header `X-Simulator-Record-Failed`, đúng một dòng ERROR, trả lời không quá 5 giây cộng dư địa 2 giây. **Chạy tay một lần trong Build and Test** (trên database phát triển, không phải database dữ liệu thật cần giữ): (1) tạo trigger chỉ dùng cho kiểm thử như ở (A) bằng `psql`, gửi callback sai khóa tới một dịch vụ `API_KEY` và thấy `401` kèm `X-Simulator-Record-Failed: true`; gửi callback đúng khóa và thấy `500`; (2) xóa trigger và hàm, trong vòng 30 giây gửi lại callback sai khóa và thấy nó được ghi (không có header). Rồi tách riêng: (3) dừng PostgreSQL cài sẵn, gửi một callback và thấy `500 INTERNAL_ERROR` không có header (BR14.9) trong khoảng 5 giây; (4) bật lại PostgreSQL, trong vòng 30 giây gửi lại và thấy backend phục vụ lại bình thường. Không có bước nào "dừng PostgreSQL rồi kỳ vọng `401`" | Giả định 12; BR14.1, BR14.9, BR15.6; Q1 A (FD); NFR2.4 (U1) |
+| NFR2.27 | **Phục hồi của công cụ nạp** (BR22.5): lỗi giữa chừng thì dừng, **giữ nguyên dữ liệu đã ghi**, in số bản ghi đã ghi và lý do (không kèm mật khẩu, payload hay khóa), thoát mã khác 0. Không có tiếp tục tự động. Chạy lại cần `--append` hoặc xóa database nạp; không có `--append` mà đã có dịch vụ `LOAD_01` trở đi thì dừng, mã khác 0, **không ghi gì** (không nhân đôi dữ liệu lặng lẽ) | Kiểm thử tích hợp: gây lỗi sau một số lần nhận cố định; khẳng định mã thoát khác 0, số bản ghi in ra bằng `COUNT(*)` bảng `callbacks`, dữ liệu đã ghi còn nguyên; chạy lại không `--append` bị từ chối và số bản ghi không đổi; chạy lại có `--append` tiếp tục và dùng lại dịch vụ `LOAD_xx` đã có | Giả định 15; BR22.5 |
+| NFR2.28 | **Độ bền dữ liệu của mã mới** (mở rộng NFR2.6 của U1): Callback, kể cả lần nhận bị từ chối và dữ liệu do công cụ nạp tạo, bất biến: không có câu `UPDATE` hay `DELETE` nào trên bảng `callbacks`; phiên bản cấu hình bất biến (BR12.7): không `UPDATE` hay `DELETE` trên bảng phiên bản; Service không bao giờ bị xóa vật lý (xóa mềm): không `DELETE` trên bảng Service. Dữ liệu giữ vô thời hạn, không tác vụ nền xóa dữ liệu | Kiểm thử rà soát tĩnh của U1 (tìm các câu lệnh đó trong mã nguồn) được mở rộng cho ba bảng nêu trên và cho mọi gói mã mới, kể cả công cụ nạp; kiểm thử phải xanh. Phép rà soát áp dụng cho **mã sản xuất** (`src/main`); mã kiểm thử (dọn dữ liệu kiểm thử, tạo và xóa trigger chỉ dùng cho kiểm thử của `NFR2.26`) không thuộc phạm vi | NFR2.6 (U1); BR12.7; BR15.x; ADR-002 |
+| NFR2.29 | **Lược đồ của công cụ nạp và bản chuyển mới:** sau khi công cụ nạp chạy, lược đồ của database nạp ở **cùng phiên bản** với ứng dụng (BR22.2). Bản chuyển mới của U2 (`V2` trở đi) tự chạy lúc khởi động và không bao giờ sửa bản đã áp dụng; bản chuyển lỗi thì khởi động báo lỗi rõ ràng và thoát mã khác 0 (NFR2.5 của U1) | Kiểm thử tích hợp nạp quy mô nhỏ: bảng lịch sử Flyway của database đích của lần nạp (database kiểm thử khi kiểm thử gọi trực tiếp lõi nạp theo `NFR3.26`; database `_load` khi chạy lệnh thật) có phiên bản lớn nhất bằng phiên bản bản chuyển mới nhất của ứng dụng và mọi bản đều thành công; kiểm thử khởi động của U1 (cơ sở dữ liệu rỗng, không kết nối được) vẫn xanh | NFR2.5 (U1); BR22.2 |
+| NFR2.30 | **Sửa dịch vụ nguyên tử** (mở rộng NFR2.1 của U1, BR12.1): cập nhật Service và thêm ServiceConfigVersion mới nằm trong **một** giao dịch cơ sở dữ liệu; lỗi ghi thì 500 `INTERNAL_ERROR` kèm `X-Simulator-Error` và Service cùng phiên bản đều không đổi. Bật/tắt và xóa mềm cũng là một lần ghi đơn lẻ trong giao dịch | Kiểm thử tích hợp ép lỗi giữa hai bước ghi của một lần sửa rồi khẳng định Service giữ nguyên giá trị cũ, số phiên bản không tăng, không có phiên bản mồ côi. **Cách ép lỗi: cùng cơ chế "trigger chỉ dùng cho kiểm thử" của `NFR2.26`** (hàm PL/pgSQL gọi `RAISE EXCEPTION`, tiền tố `test_`, tạo trong kiểm thử trên database kiểm thử và xóa trong khối dọn dẹp), đặt `BEFORE INSERT` trên bảng `service_config_versions`: khi đó câu cập nhật Service đã chạy nhưng việc thêm phiên bản mới lỗi, cả giao dịch phải bị hủy. Cùng cơ chế này được `NFR3.21` dùng để quét không lộ khóa trên đường lỗi ghi khi tạo hoặc sửa dịch vụ | BR12.1; NFR2.1 (U1) |
+
+## Suy giảm có kiểm soát (bổ sung cho bảng của U1)
+
+| Tình huống | Hành vi mong muốn |
+|---|---|
+| Đọc được trạng thái dịch vụ nhưng không ghi được lần nhận bị từ chối | Trả mã từ chối gốc kèm `X-Simulator-Record-Failed: true` và `X-Simulator-Error`; một dòng ERROR; không thử lại (`NFR2.26`, BR15.6) |
+| Không ghi được callback được chấp nhận | 500 `INTERNAL_ERROR`, không trả response đã cấu hình, không có header `X-Simulator-Record-Failed` (BR14.8; NFR2.1 của U1) |
+| Không đọc được trạng thái dịch vụ (kho dữ liệu hỏng hoàn toàn) | 500 `INTERNAL_ERROR`, không header `X-Simulator-Record-Failed`, không ghi gì, một dòng ERROR, không coi là 404 (BR14.9; `NFR2.26`) |
+| PostgreSQL mất lúc thử mapping | Thử mapping vẫn trả 200 vì không dùng cơ sở dữ liệu (`NFR1.28`) |
+| 50 request đồng thời vượt pool 10 kết nối | Xếp hàng chờ tới 5 giây; kỳ vọng không request nào lỗi, chỉ được kết luận khi script đo được mức chồng nhau đủ ngưỡng (`NFR2.21`, `NFR2.22`) |
+| Công cụ nạp lỗi giữa chừng | Giữ dữ liệu đã ghi, mã thoát khác 0, báo số bản ghi (`NFR2.27`) |
+| Vòng lặp gửi sai khóa làm đầy đĩa | Không có giới hạn ở MVP (rủi ro đã chấp nhận, Q4 A); README hướng dẫn xóa database (`NFR2.25`) |
+
+## Sources
+
+- `aidlc/spaces/default/intents/261018-tpp-callback-simulator/inception/requirements-analysis/requirements.md` (requirements: NFR2, NFR5, FR3.7, FR3.8)
+- `aidlc/spaces/default/intents/261018-tpp-callback-simulator/construction/u2-backend-core/functional-design/rules.md` (rules: BR12.1, BR12.7, BR14.6, BR14.8, BR14.9, BR14.10, BR15.5, BR15.6, BR22.2, BR22.5) và `functional-spec.md` (functional-spec: W12, W16, W18, W25)
+- `aidlc/spaces/default/intents/261018-tpp-callback-simulator/construction/u2-backend-core/nfr-requirements/nfr-requirements-questions.md` (Q4 A, giả định 12, 13, 15; mục "Đã chốt")
+- `aidlc/spaces/default/intents/261018-tpp-callback-simulator/construction/u1-backend-skeleton/nfr-requirements/reliability-requirements.md` (NFR2.1, NFR2.4 đến NFR2.6, NFR5.2) và `construction/u1-backend-skeleton/nfr-design/reliability-design.md` (pool 10 kết nối, chờ 5 giây, Flyway, không thử lại tự động)
+- `aidlc/spaces/default/intents/261018-tpp-callback-simulator/construction/u1-backend-skeleton/code-generation/code-summary.md` (Docker không dùng được trên máy này; kiểm thử trên PostgreSQL cài sẵn qua `TPP_TEST_DB_*`)
+
+## Assumptions & Open Questions
+
+- **Sửa cách kiểm chứng `NFR2.26` sau review kiến trúc (R-01):** bản đầu viết "pool trỏ vào địa chỉ hỏng thì sai khóa ra 401 kèm header" và "dừng PostgreSQL rồi gửi sai khóa thì ra 401"; điều đó mâu thuẫn BR14.1 và BR14.9 (đọc ảnh dịch vụ lỗi thì 500, không header). Nay tách hai tình huống: ghi lỗi sau khi đọc được (kiểm thử bằng trigger chỉ dùng cho kiểm thử) và kho dữ liệu hỏng hoàn toàn (500). Chỉ tiêu 5 giây và 30 giây giữ nguyên; không đổi quyết định nào của bạn.
+- **Trigger chỉ dùng cho kiểm thử** là lựa chọn của tôi (thay cho thu hồi quyền `INSERT`): chạy được với role chủ bảng, không cần quyền `CREATEDB` hay quyền quản trị, và dọn được bằng `DROP TRIGGER`/`DROP FUNCTION`. Tên trigger và hàm, và việc kiểm thử chạy tuần tự để trigger không ảnh hưởng kiểm thử khác dùng chung database kiểm thử, do Code Generation chốt.
+- **Dư địa 2 giây của kiểm thử `NFR2.26`** (5 giây chờ kết nối cộng 2 giây) là chi tiết kiểm thử tôi thêm để kiểm thử không chập chờn; chỉ tiêu của ứng dụng vẫn là chờ tối đa 5 giây.
+- **Khoảng chờ 5 giây** để khẳng định "không ghi bù" ở `NFR2.26` là lựa chọn của tôi; không có số trong đầu vào.
+- **Cách dừng PostgreSQL ở máy này** (dịch vụ Windows hay cụm tạm `pg_ctl`) chưa được xác nhận cho máy của bạn; Build and Test chọn cách phù hợp. Quyết định này chỉ đổi cách kiểm thử `NFR2.4`/`NFR2.26` (bước (3), (4) chạy tay), không đổi chỉ tiêu.
+- **`NFR2.28` và `NFR2.30`** mở rộng kiểm thử rà soát tĩnh và tính nguyên tử cho sửa dịch vụ từ BR12.1 và BR12.7; không nằm trong 26 giả định, rút trực tiếp từ Functional Design để U2 không thiếu yêu cầu. Chúng không đổi quyết định nào của bạn.
+- **Khối lượng nhật ký khi cơ sở dữ liệu mất** (giả định 13) nằm ở `observability-requirements.md` (`NFR5.22`).

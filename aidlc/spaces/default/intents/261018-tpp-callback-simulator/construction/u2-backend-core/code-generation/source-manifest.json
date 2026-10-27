@@ -1,0 +1,391 @@
+{
+    "stage":  "code-generation",
+    "unit":  "u2-backend-core",
+    "version":  1,
+    "writes":  [
+                   {
+                       "path":  "docs/api/openapi.yaml"
+                   },
+                   {
+                       "path":  "docs/samples/BIEN_DONG_SO_DU.payload-faulty.json"
+                   },
+                   {
+                       "path":  "docs/samples/BIEN_DONG_SO_DU.payload-valid.json"
+                   },
+                   {
+                       "path":  "docs/samples/BIEN_DONG_SO_DU.service.json"
+                   },
+                   {
+                       "path":  "docs/samples/CHI_HO.payload-faulty.json"
+                   },
+                   {
+                       "path":  "docs/samples/CHI_HO.payload-valid.json"
+                   },
+                   {
+                       "path":  "docs/samples/CHI_HO.service.json"
+                   },
+                   {
+                       "path":  "docs/samples/README.md"
+                   },
+                   {
+                       "path":  "docs/samples/THU_HO.payload-faulty.json"
+                   },
+                   {
+                       "path":  "docs/samples/THU_HO.payload-valid.json"
+                   },
+                   {
+                       "path":  "docs/samples/THU_HO.service.json"
+                   },
+                   {
+                       "path":  "docs/samples/thu-ho-callback.json"
+                   },
+                   {
+                       "path":  "docs/samples/thu-ho-service.json"
+                   },
+                   {
+                       "path":  "README.md"
+                   },
+                   {
+                       "path":  "scripts/check-concurrency.ps1"
+                   },
+                   {
+                       "path":  "scripts/create-sample-services.ps1"
+                   },
+                   {
+                       "path":  "scripts/create-sample-services.sh"
+                   },
+                   {
+                       "path":  "scripts/measure-list-latency.ps1"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/catalog/ServiceCatalog.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/catalog/ServiceConfigComparator.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/catalog/ServiceEnabledRequest.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/catalog/ServiceRuntimeConfig.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/catalog/ServiceRuntimeSnapshot.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/catalog/ServiceUpdateRequest.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/catalog/ServiceValidator.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/config/MaskedHeaders.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/ingestion/ApiKeyVerifier.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/ingestion/CallbackIngestionService.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/ingestion/IngestionResult.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/ingestion/RejectedPayloadClassifier.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/ingestion/RejectionReason.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/ingestion/WriteStatus.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/ledger/CallbackDetail.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/ledger/CallbackFilter.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/ledger/CallbackLedger.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/ledger/CallbackListItem.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/ledger/ListQueryBuilder.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/ledger/PageResult.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/ledger/RejectedCallback.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/ledger/TimeBounds.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/ledger/TransactionFilter.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/loadtool/DatabaseNameGuard.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/loadtool/LoadBootstrap.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/loadtool/LoadCommand.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/loadtool/LoadDataGenerator.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/loadtool/LoadParameters.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/loadtool/LoadRefusedException.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/loadtool/LoadReport.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/loadtool/LoadRunner.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/loadtool/LoadServiceDefinitions.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/loadtool/LoadToolContext.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/loadtool/LoadToolMain.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/mapping/MappingConfig.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/mapping/MappingEngine.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/mapping/MappingTester.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/mapping/SampleJsonDiagnostics.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/mapping/TimestampFormat.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/mapping/TimestampPatterns.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/mapping/UnixTimestampParser.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/web/ApiErrors.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/web/ApiExceptionAdvice.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/web/CallbackAccessLog.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/web/CallbackController.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/web/CallbackLogEntry.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/web/CallbackQueryController.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/web/ListParams.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/web/MappingTestController.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/web/RequestSizeLimitFilter.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/web/ServiceController.java"
+                   },
+                   {
+                       "path":  "src/main/java/com/tpp/simulator/web/TransactionController.java"
+                   },
+                   {
+                       "path":  "src/main/resources/db/migration/V2__list_filter_indexes.sql"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ApiKeyColumnRulesTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/catalog/ServiceCatalogTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/catalog/ServiceEditAtomicityTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/catalog/ServiceEditConcurrencyTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/catalog/ServiceEditTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/catalog/ServiceValidatorTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/config/ErrorCodeMappingTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/config/MaskedHeadersTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/DatabaseDownLoggingTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ingestion/ApiKeyAuthTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ingestion/ApiKeyVerifierTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ingestion/CallbackIngestionTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ingestion/CallbackOrderingTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ingestion/IngestionWriteStatusTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ingestion/RejectedPayloadClassifierTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ingestion/RejectedReceiptTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ingestion/RejectionWriteFailureTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ingestion/RequestSizeLimitTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ledger/ListFilterTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ledger/ListInjectionTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ledger/ListPagingTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ledger/ListQueryPlanTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ledger/QueryPlanTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ledger/RejectedLedgerTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ledger/TimeBoundsTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/loadtool/DatabaseNameGuardTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/loadtool/LoadCommandTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/loadtool/LoadDataGeneratorTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/loadtool/LoadParametersTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/loadtool/LoadReportTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/loadtool/LoadRunnerSmallRunTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/loadtool/LoadRunnerStopsOnFirstFailureTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/loadtool/LoadRunnerWriteFailureTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/loadtool/LoadServiceDefinitionsTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/loadtool/LoadToolContextTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/mapping/MappingEngineFormatsTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/mapping/TimestampPatternsTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/mapping/UnixTimestampParserTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/PackageDependencyTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/SampleServicesTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/SchemaMigrationTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/ScriptsTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/SecretLeakScanTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/SourceRulesTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/StartupDoesNotSeedTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/support/AbstractIntegrationTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/support/FailureTrigger.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/support/FailureTriggerTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/support/Fixtures.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/support/LogCapture.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/support/ParallelRunner.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/web/CallbackLoggingTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/web/CallbackQueryApiTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/web/ErrorHandlingTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/web/MappingTestApiTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/web/ServiceApiTest.java"
+                   },
+                   {
+                       "path":  "src/test/java/com/tpp/simulator/web/TransactionApiTest.java"
+                   }
+               ]
+}

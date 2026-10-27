@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bảng theo dõi AI-DLC</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --card: #ffffff; --text: #1b2330; --muted: #4a5568; --line: #cfd6df;
+    --accent: #0b5cad; --ok: #14532d; --ok-bg: #d9f2e3; --run: #7a3e00; --run-bg: #ffe8c2;
+    --wait: #4c1d95; --wait-bg: #e9defb; --skip: #3f4756; --skip-bg: #e3e7ec;
+    --pend: #1e3a5f; --pend-bg: #dbe7f6; --bad: #7f1d1d; --bad-bg: #fde2e2;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: #12263f; color: #fff; padding: 12px 20px; display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+  header h1 { font-size: 18px; margin: 0; flex: 1 1 auto; }
+  header label { font-size: 13px; }
+  header select, header button { font: inherit; padding: 4px 8px; border-radius: 4px; border: 1px solid #8aa0bb; background: #fff; color: #12263f; }
+  header button { cursor: pointer; font-weight: 600; }
+  header button:focus-visible, select:focus-visible { outline: 3px solid #ffd166; outline-offset: 1px; }
+  main { max-width: 1280px; margin: 0 auto; padding: 16px 20px 40px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
+  h2 { font-size: 16px; margin: 0 0 10px; }
+  h3 { font-size: 14px; margin: 14px 0 6px; }
+  .note { color: var(--muted); font-size: 12.5px; margin: 4px 0 8px; }
+  .err { background: var(--bad-bg); color: var(--bad); border: 1px solid #e9a3a3; border-radius: 6px; padding: 6px 10px; margin: 6px 0; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+  .card { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: #fafbfc; }
+  .card .k { font-size: 12px; color: var(--muted); }
+  .card .v { font-size: 15px; font-weight: 600; word-break: break-word; }
+  .card.wide { grid-column: span 2; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  caption { text-align: left; color: var(--muted); font-size: 12.5px; padding-bottom: 4px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: #eef2f6; position: sticky; top: 0; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .done { color: var(--ok); background: var(--ok-bg); }
+  .active, .running { color: var(--run); background: var(--run-bg); }
+  .awaiting, .revising { color: var(--wait); background: var(--wait-bg); }
+  .skipped { color: var(--skip); background: var(--skip-bg); }
+  .pending { color: var(--pend); background: var(--pend-bg); }
+  .failed { color: var(--bad); background: var(--bad-bg); }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 8px; }
+  .filters select { font: inherit; padding: 3px 6px; max-width: 280px; }
+  .scroll { max-height: 420px; overflow: auto; }
+  code, .mono { font-family: Consolas, "Courier New", monospace; font-size: 12.5px; }
+  .tab { white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Bảng theo dõi AI-DLC <span style="font-weight:400;font-size:13px">(chỉ đọc)</span></h1>
+  <label>Intent: <select id="intentSel" aria-label="Chọn intent"></select></label>
+  <span id="updated" role="status" aria-live="polite">Chưa cập nhật</span>
+  <button id="pauseBtn" type="button" aria-pressed="false">Tạm dừng</button>
+</header>
+<main>
+  <div id="fatal" class="err" role="alert" hidden></div>
+
+  <section aria-labelledby="h-overview">
+    <h2 id="h-overview">1. Tổng quan workflow</h2>
+    <div id="overviewErr"></div>
+    <div id="overview" class="cards"></div>
+    <p class="note" id="overviewNote"></p>
+  </section>
+
+  <section aria-labelledby="h-stages">
+    <h2 id="h-stages">2. Tiến độ theo phase / stage</h2>
+    <div id="stagesErr"></div>
+    <p class="note" id="stagesSrc"></p>
+    <div class="tablewrap scroll"><table id="stagesTbl"></table></div>
+    <h3>Tiến độ theo unit (Construction)</h3>
+    <p class="note">Suy ra từ sự kiện UNIT_STARTED / UNIT_COMPLETED / UNIT_SKIPPED trong audit.</p>
+    <div class="tablewrap"><table id="unitsTbl"></table></div>
+  </section>
+
+  <section aria-labelledby="h-audit">
+    <h2 id="h-audit">3. Thống kê audit</h2>
+    <div id="auditErr"></div>
+    <div id="auditCards" class="cards"></div>
+    <p class="note" id="auditNote"></p>
+    <div class="two">
+      <div class="tablewrap scroll"><table id="byEventTbl"></table></div>
+      <div class="tablewrap scroll"><table id="byStageTbl"></table></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-recent">
+    <h2 id="h-recent">4. 50 sự kiện audit gần nhất (mới nhất ở trên)</h2>
+    <div class="filters">
+      <label>Loại sự kiện: <select id="fEvent"></select></label>
+      <label>Stage: <select id="fStage"></select></label>
+      <span id="recentCount" class="note"></span>
+    </div>
+    <div class="tablewrap scroll"><table id="recentTbl"></table></div>
+  </section>
+
+  <section aria-labelledby="h-files">
+    <h2 id="h-files">5. Artefact, bằng chứng kiểm chứng, checkpoint</h2>
+    <div id="filesErr"></div>
+    <h3>Artefact (theo thời gian sửa, mới nhất trước)</h3>
+    <p class="note" id="artNote"></p>
+    <div class="tablewrap scroll"><table id="artTbl"></table></div>
+    <div class="two">
+      <div><h3>Thư mục verification</h3><p class="note" id="verNote"></p><div class="tablewrap scroll"><table id="verTbl"></table></div></div>
+      <div><h3>Thư mục .aidlc-construction-checkpoints</h3><p class="note" id="cpNote"></p><div class="tablewrap scroll"><table id="cpTbl"></table></div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var REFRESH_MS = 5000;
+  var timer = null, paused = false, loading = false;
+  var $ = function (id) { return document.getElementById(id); };
+
+  var STATUS_VI = { done: 'Xong', active: 'Đang chạy', awaiting: 'Chờ duyệt', revising: 'Đang sửa', skipped: 'Bỏ qua', pending: 'Chưa làm', running: 'Đang chạy' };
+  var PHASE_VI = { initialization: 'Khởi tạo', ideation: 'Ý tưởng', inception: 'Khởi đầu', construction: 'Xây dựng', operation: 'Vận hành', '': '—' };
+
+  // Tạo phần tử bằng textContent: dữ liệu audit không tin cậy, không bao giờ dùng innerHTML.
+  function el(tag, text, cls, attrs) {
+    var n = document.createElement(tag);
+    if (text != null && text !== '') n.textContent = String(text);
+    if (cls) n.className = cls;
+    if (attrs) Object.keys(attrs).forEach(function (k) { n.setAttribute(k, attrs[k]); });
+    return n;
+  }
+  function badge(status, label) { return el('span', label || STATUS_VI[status] || status, 'badge ' + status); }
+
+  function fmtTime(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    return isNaN(d) ? String(iso) : d.toLocaleString('vi-VN', { hour12: false });
+  }
+  function timeCell(iso) {
+    var td = el('td', fmtTime(iso), 'tab');
+    if (iso) td.setAttribute('title', iso + ' (UTC)');
+    return td;
+  }
+  function fmtDur(sec) {
+    if (sec == null) return '—';
+    if (sec < 60) return sec + ' giây';
+    var m = Math.round(sec / 60);
+    if (m < 60) return m + ' phút';
+    var h = Math.floor(m / 60);
+    if (h < 48) return h + ' giờ ' + (m % 60) + ' phút';
+    return Math.floor(h / 24) + ' ngày ' + (h % 24) + ' giờ';
+  }
+  function fmtSize(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+  }
+
+  function table(id, caption, headCols, rows) {
+    var t = $(id);
+    t.replaceChildren();
+    if (caption) t.appendChild(el('caption', caption));
+    var tr = el('tr');
+    headCols.forEach(function (c) {
+      var th = el('th', c.t, c.num ? 'num' : '', { scope: 'col' });
+      tr.appendChild(th);
+    });
+    t.appendChild(el('thead')).appendChild(tr);
+    var tb = el('tbody');
+    if (!rows.length) {
+      var r = el('tr'); var td = el('td', 'Không có dữ liệu', 'note', { colspan: headCols.length });
+      r.appendChild(td); tb.appendChild(r);
+    }
+    rows.forEach(function (r) { tb.appendChild(r); });
+    t.appendChild(tb);
+  }
+  function row(cells) {
+    var tr = el('tr');
+    cells.forEach(function (c) {
+      if (c instanceof Node) tr.appendChild(c);
+      else tr.appendChild(el('td', c));
+    });
+    return tr;
+  }
+  function numTd(v) { return el('td', v, 'num'); }
+  function showErr(id, msgs) {
+    var box = $(id); box.replaceChildren();
+    msgs.forEach(function (m) { box.appendChild(el('div', m, 'err', { role: 'alert' })); });
+  }
+
+  function card(k, v, wide) {
+    var c = el('div', null, 'card' + (wide ? ' wide' : ''));
+    c.appendChild(el('div', k, 'k'));
+    c.appendChild(el('div', v == null || v === '' ? '—' : v, 'v'));
+    return c;
+  }
+
+  function renderOverview(d) {
+    var errs = [];
+    if (d.errors.state) errs.push('Không đọc được aidlc-state.md: ' + d.errors.state);
+    showErr('overviewErr', errs);
+    var box = $('overview'); box.replaceChildren();
+    var s = d.state;
+    if (s) {
+      box.appendChild(card('Scope', s.scope));
+      box.appendChild(card('Phase', (PHASE_VI[(s.phase || '').toLowerCase()] || s.phase) + (s.phase ? ' (' + s.phase + ')' : '')));
+      box.appendChild(card('Stage hiện tại', s.currentStage));
+      box.appendChild(card('Trạng thái', s.status));
+      box.appendChild(card('Agent đang làm', s.agent));
+      box.appendChild(card('Unit đang làm', s.unit));
+      box.appendChild(card('Stage hoàn thành gần nhất', s.lastCompleted));
+      box.appendChild(card('Stage kế tiếp', s.nextStage));
+      box.appendChild(card('Next action', s.nextAction, true));
+      box.appendChild(card('Đã xong / tổng stage', (s.completedStages || '?') + ' / ' + (s.totalStages || '?')));
+      box.appendChild(card('Cập nhật state lúc', fmtTime(s.lastUpdated)));
+      box.appendChild(card('Bắt đầu', fmtTime(s.startDate)));
+      var note = 'Nguồn: aidlc-state.md.' + (s.unitSource ? ' Unit: ' + s.unitSource + '.' : ' Unit: chưa xác định được từ audit.');
+      $('overviewNote').textContent = note + ' Intent đang xem: ' + d.intent + (d.intent === d.activeIntent ? ' (intent hoạt động)' : ' (không phải intent hoạt động: ' + d.activeIntent + ')');
+    } else {
+      $('overviewNote').textContent = 'Không có dữ liệu state.';
+    }
+  }
+
+  function renderStages(d) {
+    var errs = [];
+    if (d.errors.runtimeGraph) errs.push('runtime-graph.json: ' + d.errors.runtimeGraph);
+    showErr('stagesErr', errs);
+    $('stagesSrc').textContent = 'Nguồn: ' + (d.stageSources.length ? d.stageSources.join('; ') : 'không có') + '.';
+    var rows = d.stages.map(function (s) {
+      var sens = s.sensorFirings ? s.sensorFirings + (s.sensorFailed ? ' (' + s.sensorFailed + ' lỗi)' : '') : '—';
+      var unitsTd = el('td');
+      s.units.forEach(function (u) {
+        var line = el('div', null, 'tab');
+        line.appendChild(badge(u.status));
+        line.appendChild(document.createTextNode(' ' + u.unit));
+        unitsTd.appendChild(line);
+      });
+      if (!s.units.length) unitsTd.textContent = '—';
+      var stTd = el('td'); stTd.appendChild(badge(s.status));
+      return row([PHASE_VI[s.phase] || s.phase || '—', el('td', s.slug, 'mono'), stTd, s.agent || '—', timeCell(s.startedAt || s.auditFirst),
+        timeCell(s.completedAt), numTd(s.auditEvents), el('td', fmtDur(s.spanSeconds), 'tab'), sens, unitsTd]);
+    });
+    table('stagesTbl', null, [{ t: 'Phase' }, { t: 'Stage' }, { t: 'Trạng thái' }, { t: 'Agent' }, { t: 'Bắt đầu' }, { t: 'Hoàn thành' },
+      { t: 'Số sự kiện', num: 1 }, { t: 'Thời lượng ước tính' }, { t: 'Sensor' }, { t: 'Theo unit' }], rows);
+
+    var progress = d.units.progress;
+    var stageSlugs = [];
+    progress.forEach(function (u) { u.stages.forEach(function (x) { if (stageSlugs.indexOf(x.stage) < 0) stageSlugs.push(x.stage); }); });
+    var urows = progress.map(function (u) {
+      var m = {}; u.stages.forEach(function (x) { m[x.stage] = x.status; });
+      var kind = (d.units.dag.filter(function (g) { return g.name === u.name; })[0] || {}).kind;
+      var cells = [el('td', u.name + (kind ? ' [' + kind + ']' : ''), 'mono')];
+      stageSlugs.forEach(function (sl) { var td = el('td'); if (m[sl]) td.appendChild(badge(m[sl])); else td.textContent = '—'; cells.push(td); });
+      return row(cells);
+    });
+    table('unitsTbl', null, [{ t: 'Unit' }].concat(stageSlugs.map(function (s) { return { t: s }; })), urows);
+  }
+
+  function renderAudit(d) {
+    showErr('auditErr', d.errors.audit ? ['Không đọc được audit: ' + d.errors.audit] : []);
+    var a = d.auditStats;
+    var box = $('auditCards'); box.replaceChildren();
+    if (!a) { $('auditNote').textContent = ''; table('byEventTbl', null, [{ t: 'Loại sự kiện' }, { t: 'Số lượng', num: 1 }], []); table('byStageTbl', null, [{ t: 'Stage' }, { t: 'Số lượng', num: 1 }], []); return; }
+    box.appendChild(card('Tổng số sự kiện', a.total));
+    box.appendChild(card('Sự kiện đầu', fmtTime(a.first)));
+    box.appendChild(card('Sự kiện cuối', fmtTime(a.last)));
+    box.appendChild(card('Số loại sự kiện', a.byEvent.length));
+    box.appendChild(card('Tệp shard', a.shards.map(function (s) { return s.name + ' (' + fmtSize(s.size) + ')'; }).join(', ')));
+    $('auditNote').textContent = a.durationNote + (a.unparsedBlocks ? ' Có ' + a.unparsedBlocks + ' khối không có trường Event (bỏ qua).' : '');
+    table('byEventTbl', 'Theo loại sự kiện (Event)', [{ t: 'Loại sự kiện' }, { t: 'Số lượng', num: 1 }],
+      a.byEvent.map(function (e) { return row([el('td', e.name, 'mono'), numTd(e.count)]); }));
+    table('byStageTbl', 'Theo stage', [{ t: 'Stage' }, { t: 'Số lượng', num: 1 }, { t: 'Đầu' }, { t: 'Cuối' }, { t: 'Thời lượng ước tính' }],
+      a.byStage.map(function (s) { return row([el('td', s.name || '(không gắn stage)', 'mono'), numTd(s.count), timeCell(s.first), timeCell(s.last), el('td', fmtDur(s.spanSeconds), 'tab')]); }));
+  }
+
+  // Chỉ dựng lại <option> khi danh sách đổi, để không làm đóng hộp chọn đang mở.
+  function fillSelect(sel, values, allLabel) {
+    var sig = JSON.stringify(values);
+    if (sel.getAttribute('data-sig') === sig) return;
+    var keep = sel.value;
+    sel.replaceChildren();
+    var o = el('option', allLabel); o.value = ''; sel.appendChild(o);
+    values.forEach(function (v) { var op = el('option', v.label); op.value = v.value; sel.appendChild(op); });
+    sel.value = values.some(function (v) { return v.value === keep; }) ? keep : '';
+    sel.setAttribute('data-sig', sig);
+  }
+
+  function renderRecent(d) {
+    var a = d.auditStats;
+    if (a) {
+      fillSelect($('fEvent'), a.byEvent.map(function (e) { return { value: e.name, label: e.name + ' (' + e.count + ')' }; }), 'Tất cả');
+      fillSelect($('fStage'), a.byStage.map(function (s) { return { value: s.name || '(none)', label: (s.name || '(không gắn stage)') + ' (' + s.count + ')' }; }), 'Tất cả');
+    }
+    $('recentCount').textContent = 'Hiển thị ' + d.recentEvents.length + ' sự kiện.';
+    table('recentTbl', null, [{ t: 'Thời điểm' }, { t: 'Event' }, { t: 'Stage' }, { t: 'Unit' }, { t: 'Agent' }, { t: 'Nội dung' }, { t: 'Dòng', num: 1 }],
+      d.recentEvents.map(function (e) {
+        return row([timeCell(e.ts), el('td', e.event, 'mono'), el('td', e.stage || '—', 'mono'), el('td', e.unit || '—', 'mono'),
+          e.agent || '—', e.summary, numTd(e.line)]);
+      }));
+  }
+
+  function fileRows(list) {
+    return list.items.map(function (f) { return row([el('td', f.path, 'mono'), el('td', fmtSize(f.size), 'tab'), timeCell(f.mtime)]); });
+  }
+  var FILE_COLS = [{ t: 'Đường dẫn (trong intent)' }, { t: 'Kích thước' }, { t: 'Sửa lúc' }];
+
+  function renderFiles(d) {
+    var errs = [];
+    if (d.errors.artifacts) errs.push('Artefact: ' + d.errors.artifacts);
+    if (d.errors.verification) errs.push('verification: ' + d.errors.verification);
+    if (d.errors.checkpoints) errs.push('checkpoints: ' + d.errors.checkpoints);
+    showErr('filesErr', errs);
+    function note(id, l, name) {
+      $(id).textContent = l.exists === false ? 'Thư mục ' + name + ' chưa tồn tại.' : 'Tổng ' + l.total + ' tệp' + (l.total > l.items.length ? ', hiển thị ' + l.items.length + ' tệp mới nhất.' : '.');
+    }
+    note('artNote', d.artifacts, 'artefact'); note('verNote', d.verification, 'verification'); note('cpNote', d.checkpoints, '.aidlc-construction-checkpoints');
+    table('artTbl', null, FILE_COLS, fileRows(d.artifacts));
+    table('verTbl', null, FILE_COLS, fileRows(d.verification));
+    table('cpTbl', null, FILE_COLS, fileRows(d.checkpoints));
+  }
+
+  function renderIntents(d) {
+    var sel = $('intentSel');
+    var sig = JSON.stringify(d.intents) + '|' + d.intent;
+    if (sel.getAttribute('data-sig') === sig) return;
+    sel.replaceChildren();
+    d.intents.forEach(function (n) { var o = el('option', n + (n === d.activeIntent ? ' (hoạt động)' : '')); o.value = n; sel.appendChild(o); });
+    sel.value = d.intent;
+    sel.setAttribute('data-sig', sig);
+  }
+
+  function buildUrl() {
+    var p = new URLSearchParams();
+    var intent = $('intentSel').value || new URLSearchParams(location.search).get('intent');
+    if (intent) p.set('intent', intent);
+    if ($('fEvent').value) p.set('event', $('fEvent').value);
+    if ($('fStage').value) p.set('stage', $('fStage').value);
+    var qs = p.toString();
+    return '/api/overview' + (qs ? '?' + qs : '');
+  }
+
+  function load() {
+    if (loading) return Promise.resolve();
+    loading = true;
+    return fetch(buildUrl(), { cache: 'no-store' })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, status: r.status, body: j }; }); })
+      .then(function (r) {
+        if (!r.ok) throw new Error((r.body && r.body.error) || ('HTTP ' + r.status));
+        var d = r.body;
+        $('fatal').hidden = true;
+        // Mỗi phần render độc lập: một phần lỗi không làm sập cả trang.
+        [renderIntents, renderOverview, renderStages, renderAudit, renderRecent, renderFiles].forEach(function (fn) {
+          try { fn(d); } catch (e) { $('fatal').hidden = false; $('fatal').textContent = 'Lỗi hiển thị (' + fn.name + '): ' + e.message; }
+        });
+        $('updated').textContent = 'Cập nhật lúc ' + new Date().toLocaleTimeString('vi-VN', { hour12: false });
+      })
+      .catch(function (e) {
+        $('fatal').hidden = false;
+        $('fatal').textContent = 'Không lấy được dữ liệu: ' + e.message + '. Sẽ thử lại.';
+      })
+      .then(function () { loading = false; });
+  }
+
+  function schedule() { clearInterval(timer); timer = paused ? null : setInterval(load, REFRESH_MS); }
+
+  $('pauseBtn').addEventListener('click', function () {
+    paused = !paused;
+    this.textContent = paused ? 'Tiếp tục' : 'Tạm dừng';
+    this.setAttribute('aria-pressed', String(paused));
+    schedule();
+    if (!paused) load();
+  });
+  ['intentSel', 'fEvent', 'fStage'].forEach(function (id) { $(id).addEventListener('change', load); });
+
+  load().then(schedule);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+## Review
+
+**Verdict:** READY
+**Reviewer:** aidlc-architecture-reviewer-agent
+**Date:** 2026-10-21T05:24:34Z
+**Iteration:** 1
+
+### Findings
+
+| ID | Severity | Location | Finding | Required action | Status |
+|---|---|---|---|---|---|
+| R-01 | Major | tpp-simulator-app/compose.yaml > services.postgres.ports | Cổng PostgreSQL được xuất bản dạng `"5432:5432"`, tức gắn vào mọi giao diện mạng của máy, với tài khoản mặc định `tpp`/`tpp`. Toàn bộ mô hình bảo mật của backend (không đăng nhập, chỉ nghe `127.0.0.1`, README cảnh báo "mọi người cùng mạng đọc được lịch sử") bị vô hiệu: người cùng mạng đọc được thẳng payload và header đã lưu từ cơ sở dữ liệu. README của đơn vị này hướng dẫn chạy `docker compose up -d` với tệp này, nhưng `source-manifest.json` không khai báo `compose.yaml`. | Đổi thành `"127.0.0.1:5432:5432"`; nêu rõ trong README rằng cơ sở dữ liệu cũng chỉ nghe loopback; khai báo `compose.yaml` trong `source-manifest.json` nếu đơn vị này chịu trách nhiệm tệp đó. | New |
+| R-02 | Minor | tpp-simulator-app/src/main/java/com/tpp/simulator/mapping/MappingEngine.java > parseIso (năm của timestamp) | `DateTimeFormatter.ISO_DATE_TIME` chấp nhận năm có dấu rất lớn (ví dụ `+999999999-12-31T23:59:59Z`). Giá trị này được coi là hợp lệ, rồi đi vào cột `timestamptz` của PostgreSQL vốn có miền hẹp hơn nhiều, nên lần ghi có thể lỗi và callback hợp lệ nhận 500 `INTERNAL_ERROR`, không được lưu. Như vậy lỗi timestamp không còn là lỗi riêng của trường (BR3.6) mà làm mất cả callback. Không có kiểm thử nào cho năm ngoài miền. Chưa chạy thử vì chỉ đọc mã. | Giới hạn năm của kết quả về miền PostgreSQL lưu được (ví dụ 1 đến 9999), ngoài miền thì trả lỗi `UNPARSEABLE` cho trường timestamp; thêm kiểm thử cho năm quá lớn và năm âm. | New |
+| R-03 | Minor | tpp-simulator-app/src/main/java/com/tpp/simulator/catalog/ServiceValidator.java > checkResponseBody | `responseBody` được đọc thành `JsonNode` và ghi lại bằng `toString()`. Với cấu hình mặc định của Jackson, số thập phân thành `double`, nên `100000.00` có thể trả về là `100000.0`, `1e3` thành `1000.0`, và số thập phân dài mất độ chính xác. Response "cố định" của mô phỏng không còn giống từng chữ với cấu hình người dùng nhập, trong khi phía ngân hàng có thể so khớp thân phản hồi. README và `code-summary.md` không nêu giới hạn này; kiểm thử chỉ dùng `{"ok":true}`. | Giữ nguyên văn bản số của `responseBody` (bật `USE_BIG_DECIMAL_FOR_FLOATS` hoặc lưu văn bản thô đã kiểm tra hợp lệ), thêm kiểm thử với số thập phân; nếu chấp nhận hành vi hiện tại thì ghi vào mục "Giới hạn đã biết" của README. | New |
+| R-04 | Minor | aidlc/spaces/default/intents/261018-tpp-callback-simulator/construction/u1-backend-skeleton/code-generation/traceability.json > coverage (NFR1.1, NFR1.3, NFR1.6, NFR6.1) | NFR1.1 và NFR1.3 được đánh dấu `OK` trỏ vào `CallbackIngestionService.java` và `CallbackLedger.java`, nhưng `code-summary.md` nói cả hai là đo tay ở Build and Test và chưa đo; NFR1.6 cũng `OK` trỏ vào `CallbackLedger.java` dù chi tiết giao dịch không có trần kích thước. Mục NFR6.1 trỏ vào `scripts/verify.ps1` không có tiền tố `tpp-simulator-app/`, khác quy ước các mục còn lại (tệp nằm ở gốc workspace, ngoài kho ứng dụng). Người đọc sẽ hiểu các yêu cầu hiệu năng và kích thước là đã đáp ứng. | Đổi trạng thái hoặc thêm ghi chú để phân biệt "đã hiện thực" với "hoãn sang Build and Test" cho NFR1.1, NFR1.3, NFR1.6; ghi rõ kho gốc của mục NFR6.1. | New |
+| R-05 | Minor | aidlc/spaces/default/intents/261018-tpp-callback-simulator/construction/u1-backend-skeleton/code-generation/source-manifest.json > writes | Manifest không có khóa kho và các đường dẫn tương đối với `tpp-simulator-app/`, nên không thể phân biệt với `scripts/verify.ps1` (conductor đã sửa) hay các tệp của kho khác. Các tệp ứng dụng mà README và CI phụ thuộc (`compose.yaml`, `.gitignore`, `.gitattributes`, `.mvn/jvm.config`, `.github/workflows/ci.yml`) đều chưa được commit và không được khai báo; `code-summary.md` chỉ nói riêng `ci.yml` là "giữ nguyên". Không xác định được tệp nào do đơn vị này tạo hay sửa. | Thêm khóa kho vào manifest, liệt kê hoặc ghi rõ nguồn gốc (có sẵn từ khung ban đầu hay do đơn vị này tạo) của các tệp trên. | New |
+| R-06 | Minor | aidlc/spaces/default/intents/261018-tpp-callback-simulator/construction/u1-backend-skeleton/code-generation/code-summary.md > Độ lệch so với kế hoạch hoặc thiết kế | Mục độ lệch thiếu việc dùng `SPRING_DATASOURCE_*` thay cho `TPP_DB_URL`, `TPP_DB_USER`, `TPP_DB_PASSWORD` của `security-design.md` (NFR3.6); chỉ kế hoạch có nêu. Mục "Tệp tạo hoặc sửa" ghi "22 lớp kiểm thử" trong khi bảng kiểm thử liệt kê 23 lớp (tổng 374 khớp). Thuộc tính `spring.jpa.open-in-view: false` còn trong `application.yml` dù đã bỏ JPA. | Bổ sung độ lệch NFR3.6 vào danh sách, sửa số lớp kiểm thử, bỏ thuộc tính JPA không còn tác dụng hoặc ghi lý do giữ lại. | New |
+
+### Validation Tool Results
+
+| Tool | Result | Interpretation |
+|---|---|---|
+| scripts/verify.ps1 (đã chạy trước, không chạy lại) | VERIFY OK: Spotless, 374 kiểm thử 0 lỗi, JaCoCo line 95,66%, luật 0.80 không hạ | Đối chiếu số kiểm thử theo lớp với bảng trong code-summary.md: tổng khớp 374 |
+| Đọc mã: INSERT ... ON CONFLICT trong CallbackLedger | PASS | Một câu lệnh duy nhất, so sánh cặp (received_at, record_id), thay đồng thời mọi cột latest_*, callback_count tăng nguyên tử; đúng thiết kế scalability |
+| Đọc mã: RequestSizeLimitFilter, application.yml | PASS | Giới hạn 1.048.576 byte kể cả chunked, 413 dùng chung ApiErrors với header X-Simulator-Error; server.address mặc định 127.0.0.1; Actuator chỉ health |
+| Đọc mã: PackageDependencyTest, SourceRulesTest | PASS | Phụ thuộc gói một chiều, không JPA, không ghép chuỗi SQL, không UPDATE hay DELETE trên callbacks, không xóa vật lý |
+| Tìm chuỗi mật khẩu người dùng trong tpp-simulator-app và hồ sơ construction | PASS | Không có mật khẩu hay bí mật trong tệp; các kết quả khớp "123456" chỉ là dữ liệu mẫu số và thời gian |
+| Kiểm tra traceability.json: tệp đích tồn tại | PASS | Mọi đích OK là một tệp hiện có và hợp lý cho ID tương ứng, trừ các lưu ý ở mục New findings |
+| aidlc engine now | Không chạy được | Lệnh không trả kết quả trên terminal; Date lấy từ đồng hồ UTC của hệ thống |
+
+### Summary
+
+Mã khớp thiết kế: câu ghi giao dịch nguyên tử, giới hạn kích thước, che header, làm sạch log, hợp đồng lỗi và phụ thuộc gói đều đúng, kiểm thử kiểm tra hành vi thật và độ bao phủ 95,66% không bị hạ ngưỡng. Một điểm đáng sửa trước khi duyệt là `compose.yaml` xuất bản PostgreSQL ra mọi giao diện mạng, trái với mô hình chỉ nghe loopback; các góp ý còn lại ở mức Minor về biên đầu vào, độ chính xác số trong response cố định và độ chính xác của hồ sơ truy vết.

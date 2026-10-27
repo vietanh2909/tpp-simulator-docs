@@ -1,0 +1,26 @@
+{
+  "stage": "code-generation",
+  "unit": "u3-frontend-services",
+  "version": 1,
+  "writes": [
+    { "path": "src/" },
+    { "path": ".env.example" },
+    { "path": ".gitignore" },
+    { "path": ".prettierignore" },
+    { "path": ".prettierrc" },
+    { "path": "README.md" },
+    { "path": "eslint.config.js" },
+    { "path": "package.json" },
+    { "path": "package-lock.json" },
+    { "path": "vite.config.ts" },
+    { "path": "_inspect.ps1" },
+    { "path": "_inspect.txt" },
+    { "path": "_p1.txt" },
+    { "path": "_peers.ps1" },
+    { "path": "_peers.txt" },
+    { "path": "_probe.txt" },
+    { "path": "_versions.ps1" },
+    { "path": "_versions.txt" },
+    { "path": "scripts/verify.ps1" }
+  ]
+}

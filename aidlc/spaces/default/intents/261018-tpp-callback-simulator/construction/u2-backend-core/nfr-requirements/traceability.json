@@ -1,0 +1,14 @@
+{
+  "stage": "nfr-requirements",
+  "unit": "u2-backend-core",
+  "upstream_ids": ["NFR1", "NFR2", "NFR3", "NFR4", "NFR5", "NFR6", "NFR7"],
+  "coverage": [
+    { "id": "NFR1", "status": "OK", "target": "NFR1.21, NFR1.22, NFR1.23, NFR1.24, NFR1.25, NFR1.26, NFR1.27, NFR1.28, NFR1.29" },
+    { "id": "NFR2", "status": "OK", "target": "NFR2.21, NFR2.22, NFR2.23, NFR2.24, NFR2.25, NFR2.26, NFR2.27, NFR2.28, NFR2.29, NFR2.30" },
+    { "id": "NFR3", "status": "OK", "target": "NFR3.21, NFR3.22, NFR3.23, NFR3.24, NFR3.25, NFR3.26, NFR3.27, NFR3.28, NFR3.29" },
+    { "id": "NFR4", "status": "N/A", "target": "U2 không có giao diện; truy cập mức cơ bản thuộc U3 và U4 (giả định 26 của nfr-requirements-questions.md)" },
+    { "id": "NFR5", "status": "OK", "target": "NFR5.21, NFR5.22, NFR5.23, NFR5.24, NFR5.25, NFR5.26" },
+    { "id": "NFR6", "status": "OK", "target": "NFR6.21, NFR6.22, NFR6.23, NFR6.24" },
+    { "id": "NFR7", "status": "OK", "target": "NFR7.21, NFR7.22" }
+  ]
+}
